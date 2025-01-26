@@ -22,7 +22,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
-    public void createProduct(ProductRequest productRequest) {
+    public Product createProduct(ProductRequest productRequest) {
         Product product = Product.builder()
                 .name(productRequest.getName())
                 .description(productRequest.getDescription())
@@ -31,6 +31,7 @@ public class ProductService {
 
         productRepository.save(product);
         log.info("Product {} is saved", product.getId());
+        return product;
     }
 
     public List<ProductResponse> getAllProducts() {

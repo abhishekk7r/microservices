@@ -2,6 +2,7 @@ package com.microservice.productservice.controller;
 
 import com.microservice.productservice.dto.ProductRequest;
 import com.microservice.productservice.dto.ProductResponse;
+import com.microservice.productservice.model.Product;
 import com.microservice.productservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,8 @@ public class ProductController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void createProduct(@RequestBody ProductRequest productRequest) {
-        productService.createProduct(productRequest);
+    public Product createProduct(@RequestBody ProductRequest productRequest) {
+        return productService.createProduct(productRequest);
     }
 
     @GetMapping
