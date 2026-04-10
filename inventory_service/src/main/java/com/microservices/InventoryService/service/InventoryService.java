@@ -30,21 +30,40 @@ public class InventoryService {
 
     @Transactional
     public boolean checkAndReduceStock(List<InventoryRequest> requests) {
-        for (InventoryRequest request : requests) {
-            Inventory inventory = inventoryRepository.findBySkuCode(request.getSkuCode())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + request.getSkuCode()));
+        // Extract and sort SKU codes to prevent deadlocks when acquiring pessimistic locks
+        List<String> sortedSkus = requests.stream()
+                .map(InventoryRequest::getSkuCode)
+                .sorted()
+                .toList();
 
+        // Fetch and lock all requested inventory items in a single query
+        List<Inventory> inventories = inventoryRepository.findBySkuCodeIn(sortedSkus);
+
+        // Verify all products exist
+        if (inventories.size() != requests.size()) {
+            throw new IllegalArgumentException("One or more products not found in inventory");
+        }
+
+        // Map for quick lookup
+        java.util.Map<String, Inventory> inventoryMap = inventories.stream()
+                .collect(java.util.stream.Collectors.toMap(Inventory::getSkuCode, i -> i));
+
+        // Check if there is enough stock for all requests
+        for (InventoryRequest request : requests) {
+            Inventory inventory = inventoryMap.get(request.getSkuCode());
             if (inventory.getQuantity() < request.getQuantity()) {
-                return false; // Not enough stock for this product
+                return false; // Not enough stock
             }
         }
 
-        // If all products have enough stock, reduce quantities
+        // All checks passed, reduce quantities
         for (InventoryRequest request : requests) {
-            Inventory inventory = inventoryRepository.findBySkuCode(request.getSkuCode()).get();
+            Inventory inventory = inventoryMap.get(request.getSkuCode());
             inventory.setQuantity(inventory.getQuantity() - request.getQuantity());
-            inventoryRepository.save(inventory);
         }
+
+        // Save all changes in bulk
+        inventoryRepository.saveAll(inventories);
 
         return true;
     }
